@@ -67,7 +67,6 @@ class MarketMonitor:
         for i in range(10):  # 10行
             row_labels = []
             for j in range(4):  # 4列
-                # 创建一个Frame作为容器，设置白色背景
                 cell_frame = tk.Frame(
                     self.grid_frame,
                     relief="solid",
@@ -76,7 +75,7 @@ class MarketMonitor:
                 )
                 cell_frame.grid(row=i, column=j, padx=5, pady=5, sticky="nsew")
                 
-                # 在Frame中创建Label，移除固定宽度
+                # 移除 wraplength，让文本自然展开
                 label = tk.Label(
                     cell_frame,
                     text="-",
@@ -84,8 +83,7 @@ class MarketMonitor:
                     fg='#0066CC',
                     bg='white',
                     anchor='center',
-                    justify='center',
-                    wraplength=200  # 添加自动换行
+                    justify='center'
                 )
                 label.pack(expand=True, fill='both', padx=5, pady=5)
                 row_labels.append(label)
@@ -93,7 +91,6 @@ class MarketMonitor:
                 # 配置列的权重
                 self.grid_frame.columnconfigure(j, weight=1)
             self.price_labels.append(row_labels)
-            # 配置行的权重
             self.grid_frame.rowconfigure(i, weight=1)
         
         # 设置整个窗口的背景色为白色
@@ -131,20 +128,16 @@ class MarketMonitor:
                 logging.info("开始获取市场数据...")
                 self.driver.get(self.url_entry.get())
                 
-                # 等待页面加载完成
-                time.sleep(2)  # 给页面一些加载时间
+                time.sleep(2)
                 
-                # 等待市场容器加载
                 logging.info("等待市场容器加载...")
                 market_container = WebDriverWait(self.driver, 10).until(
                     EC.presence_of_element_located((By.ID, "markets-grid-container"))
                 )
                 
-                # 获取所有市场链接
                 market_links = market_container.find_elements(By.TAG_NAME, "a")
                 logging.info(f"找到 {len(market_links)} 个链接")
                 
-                # 过滤有效链接
                 valid_links = []
                 for link in market_links:
                     href = link.get_attribute('href')
@@ -154,7 +147,6 @@ class MarketMonitor:
                 
                 logging.info(f"处理 {len(valid_links)} 个有效链接")
                 
-                # 处理每个有效链接
                 for idx, href in enumerate(valid_links):
                     try:
                         logging.debug(f"处理链接 {idx + 1}: {href}")
@@ -167,11 +159,13 @@ class MarketMonitor:
                         )
                         
                         if len(prices) >= 2:
+                            # 处理市场ID，移除 "will-" 前缀
                             market_id = href.rstrip('/').split('/')[-1]
+                            market_id = market_id.replace('will-', '')
+                            
                             yes_price = prices[0].text
                             no_price = prices[1].text
-                            display_text = f"{market_id}\nYES: {yes_price}\nNO: {no_price}"
-                            
+                            display_text = f"{market_id}\n{yes_price}\n{no_price}" #这里不需要 YES 和 NO 了                            
                             logging.debug(f"市场 {market_id} 价格: YES={yes_price}, NO={no_price}")
                             self.root.after(0, self.update_price_label, idx, display_text)
                         
