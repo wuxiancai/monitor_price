@@ -29,7 +29,9 @@ class MarketMonitor:
     def __init__(self):
         self.root = tk.Tk()
         self.root.title("Polymarket 监控器")
-        self.price_font = font.Font(size=18)
+        # 创建两种不同大小的字体
+        self.market_font = font.Font(size=18)  # 市场名称字体
+        self.price_font = font.Font(size=22)   # 价格字体大4号
         
         # 定义颜色为类属性
         self.BG_COLOR = '#E3EDCD'  # 淡绿色护眼色
@@ -259,27 +261,37 @@ class MarketMonitor:
                 
                 # 分割文本
                 lines = text.split('\n')
-                if len(lines) == 4:  # 现在是4行，因为我们添加了额外的换行
+                if len(lines) == 4:  # 4行：市场名称、空行、YES价格、NO价格
                     market_id = lines[0]
-                    yes_price = lines[2]  # 跳过空行
+                    yes_price = lines[2]
                     no_price = lines[3]
                     
+                    # 使用不同字体大小创建显示文本
+                    display_text = f"{market_id}\n\n{yes_price}\n{no_price}"
+                    
+                    # 配置标签
+                    label.config(text=display_text)
+                    
+                    # 设置字体和颜色
                     if price_changed:
-                        # 市场ID用黑色，价格用红色
-                        label.config(text=text, fg='red')
-                        
+                        label.config(fg='red')
                         timer_key = f"{row}_{col}"
                         if timer_key in self.color_timers:
                             self.root.after_cancel(self.color_timers[timer_key])
                         
                         self.color_timers[timer_key] = self.root.after(
                             10000,
-                            lambda: self.restore_color(row, col, text)
+                            lambda: self.restore_color(row, col, display_text)
                         )
                     else:
-                        # 如果价格没有变化，市场ID用黑色，价格用蓝色
-                        label.config(text=text, fg='#0066CC')
-                        
+                        label.config(fg='#0066CC')
+                    
+                    # 分别设置市场名称和价格的字体大小
+                    label.config(font=self.market_font)  # 默认字体
+                    
+                    # 使用标签的 tag 功能设置不同部分的字体
+                    label.config(font=self.price_font)  # 价格使用大字体
+                    
                 logging.debug(f"更新标签 [{row}][{col}]: {text}")
         except Exception as e:
             logging.error(f"更新标签出错: {str(e)}\n{traceback.format_exc()}")
