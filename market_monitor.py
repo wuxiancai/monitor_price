@@ -74,6 +74,37 @@ class MarketMonitor:
         )
         self.stop_btn.pack(side='left', padx=5)
         
+        # 添加快捷按钮
+        self.solana_btn = tk.Button(
+            input_frame,
+            text="Solana",
+            command=lambda: self.update_url('solana'),
+            bg=FRAME_BG,
+            relief="raised",
+            font=('Arial', 10)
+        )
+        self.solana_btn.pack(side='left', padx=5)
+        
+        self.bitcoin_btn = tk.Button(
+            input_frame,
+            text="Bitcoin",
+            command=lambda: self.update_url('bitcoin'),
+            bg=FRAME_BG,
+            relief="raised",
+            font=('Arial', 10)
+        )
+        self.bitcoin_btn.pack(side='left', padx=5)
+        
+        self.ethereum_btn = tk.Button(
+            input_frame,
+            text="Ethereum",
+            command=lambda: self.update_url('ethereum'),
+            bg=FRAME_BG,
+            relief="raised",
+            font=('Arial', 10)
+        )
+        self.ethereum_btn.pack(side='left', padx=5)
+        
         # 第二行：标签
         ttk.Label(self.root, text="实时价格监控").pack(pady=10)
         
@@ -285,6 +316,17 @@ class MarketMonitor:
     def run(self):
         logging.info("启动主程序...")
         self.root.mainloop()
+
+    def update_url(self, crypto_name):
+        """更新URL中的加密货币名称"""
+        current_url = self.url_entry.get()
+        # 分割URL并替换最后一个部分
+        parts = current_url.rstrip('/').split('/')
+        parts[-1] = crypto_name
+        new_url = '/'.join(parts)
+        # 更新输入框
+        self.url_entry.delete(0, tk.END)
+        self.url_entry.insert(0, new_url)
 
 if __name__ == "__main__":
     try:
