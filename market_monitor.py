@@ -30,21 +30,20 @@ class MarketMonitor:
         self.root = tk.Tk()
         self.root.title("Polymarket 监控器")
         self.price_font = font.Font(size=18)
+        
+        # 定义颜色为类属性
+        self.BG_COLOR = '#E3EDCD'  # 淡绿色护眼色
+        self.FRAME_BG = '#F0F4EA'  # 稍浅一点的护眼色，用于方格背景
+        
         self.setup_ui()
         self.monitoring = False
         self.driver = None
         self.monitor_thread = None
-        # 存储上一次的价格数据
         self.last_prices = {}
-        # 存储颜色恢复的计时器
         self.color_timers = {}
         logging.info("程序初始化完成")
 
     def setup_ui(self):
-        # 设置护眼背景色
-        BG_COLOR = '#E3EDCD'  # 淡绿色护眼色
-        FRAME_BG = '#F0F4EA'  # 稍浅一点的护眼色，用于方格背景
-
         # 第一行：输入框和按钮
         input_frame = ttk.Frame(self.root)
         input_frame.pack(pady=10, padx=10, fill='x')
@@ -53,12 +52,11 @@ class MarketMonitor:
         self.url_entry.insert(0, "https://polymarket.com/markets/crypto/bitcoin")
         self.url_entry.pack(side='left', padx=5)
         
-        # 使用 tk.Button 代替 ttk.Button 以支持颜色变化
         self.start_btn = tk.Button(
             input_frame, 
             text="开始监控",
             command=self.start_monitoring,
-            bg=FRAME_BG,
+            bg=self.FRAME_BG,
             relief="raised",
             font=('Arial', 10)
         )
@@ -68,7 +66,7 @@ class MarketMonitor:
             input_frame,
             text="停止监控",
             command=self.stop_monitoring,
-            bg=FRAME_BG,
+            bg=self.FRAME_BG,
             relief="raised",
             font=('Arial', 10)
         )
@@ -79,7 +77,7 @@ class MarketMonitor:
             input_frame,
             text="Solana",
             command=lambda: self.update_url('solana'),
-            bg=FRAME_BG,
+            bg=self.FRAME_BG,
             relief="raised",
             font=('Arial', 10)
         )
@@ -89,7 +87,7 @@ class MarketMonitor:
             input_frame,
             text="Bitcoin",
             command=lambda: self.update_url('bitcoin'),
-            bg=FRAME_BG,
+            bg=self.FRAME_BG,
             relief="raised",
             font=('Arial', 10)
         )
@@ -99,7 +97,7 @@ class MarketMonitor:
             input_frame,
             text="Ethereum",
             command=lambda: self.update_url('ethereum'),
-            bg=FRAME_BG,
+            bg=self.FRAME_BG,
             relief="raised",
             font=('Arial', 10)
         )
@@ -109,19 +107,31 @@ class MarketMonitor:
         ttk.Label(self.root, text="实时价格监控").pack(pady=10)
         
         # 第三行：价格显示网格
-        self.grid_frame = tk.Frame(self.root, bg=BG_COLOR)
+        self.grid_frame = tk.Frame(self.root, bg=self.BG_COLOR)
         self.grid_frame.pack(padx=10, pady=10, expand=True, fill='both')
         
-        # 创建4x10的网格布局
+        # 初始化价格标签列表
         self.price_labels = []
-        for i in range(10):  # 10行
+
+    def create_grid(self, num_links):
+        """根据链接数量创建网格"""
+        # 清除现有的网格
+        for widget in self.grid_frame.winfo_children():
+            widget.destroy()
+        
+        # 计算需要的行数（向上取整）
+        num_rows = (num_links + 3) // 4  # 4是列数
+        
+        # 创建新的网格
+        self.price_labels = []
+        for i in range(num_rows):
             row_labels = []
             for j in range(4):  # 4列
                 cell_frame = tk.Frame(
                     self.grid_frame,
                     relief="solid",
                     borderwidth=1,
-                    bg=FRAME_BG
+                    bg=self.FRAME_BG
                 )
                 cell_frame.grid(row=i, column=j, padx=5, pady=5, sticky="nsew")
                 
@@ -129,11 +139,11 @@ class MarketMonitor:
                     cell_frame,
                     text="-",
                     font=self.price_font,
-                    fg='#0066CC',  # 蓝色文字
-                    bg=FRAME_BG,   # 方格背景色
+                    fg='#0066CC',
+                    bg=self.FRAME_BG,
                     anchor='center',
                     justify='center',
-                    pady=10  # 增加上下间距
+                    pady=10
                 )
                 label.pack(expand=True, fill='both', padx=5, pady=5)
                 row_labels.append(label)
@@ -141,9 +151,6 @@ class MarketMonitor:
                 self.grid_frame.columnconfigure(j, weight=1)
             self.price_labels.append(row_labels)
             self.grid_frame.rowconfigure(i, weight=1)
-        
-        # 设置整个窗口的背景色
-        self.root.configure(bg=BG_COLOR)
 
     def setup_driver(self):
         try:
@@ -184,18 +191,26 @@ class MarketMonitor:
                     EC.presence_of_element_located((By.ID, "markets-grid-container"))
                 )
                 
+                # 获取并过滤链接
                 market_links = market_container.find_elements(By.TAG_NAME, "a")
-                logging.info(f"找到 {len(market_links)} 个链接")
-                
                 valid_links = []
                 for link in market_links:
                     href = link.get_attribute('href')
                     if href and '#comments' not in href:
                         valid_links.append(href)
-                        logging.debug(f"有效链接: {href}")
                 
-                logging.info(f"处理 {len(valid_links)} 个有效链接")
+                num_links = len(valid_links)
+                logging.info(f"找到 {num_links} 个有效链接")
                 
+                # 只在第一次或链接数量变化时创建网格
+                current_rows = len(self.price_labels)
+                needed_rows = (num_links + 3) // 4
+                if current_rows != needed_rows:
+                    logging.info(f"需要调整网格大小: 从 {current_rows} 行到 {needed_rows} 行")
+                    self.root.after(0, self.create_grid, num_links)
+                    time.sleep(0.5)  # 等待网格创建完成
+                
+                # 处理每个有效链接
                 for idx, href in enumerate(valid_links):
                     try:
                         logging.debug(f"处理链接 {idx + 1}: {href}")
@@ -221,22 +236,16 @@ class MarketMonitor:
                                 if last_yes != yes_price or last_no != no_price:
                                     price_changed = True
                             
-                            # 更新最后的价格
                             self.last_prices[market_id] = (yes_price, no_price)
-                            
-                            # 构建显示文本，市场名称用黑色
-                            display_text = f"{market_id}\n{yes_price}\n{no_price}"
-                            
-                            # 更新UI并设置颜色
+                            display_text = f"{market_id}\n\n{yes_price}\n{no_price}"  # 保持间距一致
                             self.root.after(0, self.update_price_label, idx, display_text, price_changed)
-                            
+                    
                     except Exception as e:
                         logging.error(f"处理链接 {href} 时出错: {str(e)}")
                         continue
-                
+            
             except Exception as e:
                 logging.error(f"监控过程中出错: {str(e)}")
-                self.status_label.config(text=f"状态: 监控出错 - {str(e)}")
             
             self.root.update()
             time.sleep(5)
@@ -250,14 +259,14 @@ class MarketMonitor:
                 
                 # 分割文本
                 lines = text.split('\n')
-                if len(lines) == 3:
-                    market_id, yes_price, no_price = lines
+                if len(lines) == 4:  # 现在是4行，因为我们添加了额外的换行
+                    market_id = lines[0]
+                    yes_price = lines[2]  # 跳过空行
+                    no_price = lines[3]
                     
-                    # 创建带有不同颜色的文本，增加间距
                     if price_changed:
-                        display_text = f"{market_id}\n\n"  # 增加空行作为间距
-                        display_text += f"{yes_price}\n{no_price}"
-                        label.config(text=display_text, fg='red')
+                        # 市场ID用黑色，价格用红色
+                        label.config(text=text, fg='red')
                         
                         timer_key = f"{row}_{col}"
                         if timer_key in self.color_timers:
@@ -265,12 +274,11 @@ class MarketMonitor:
                         
                         self.color_timers[timer_key] = self.root.after(
                             10000,
-                            lambda: self.restore_color(row, col, display_text)
+                            lambda: self.restore_color(row, col, text)
                         )
                     else:
-                        # 如果价格没有变化，使用默认颜色
-                        display_text = f"{market_id}\n\n{yes_price}\n{no_price}"  # 增加空行作为间距
-                        label.config(text=display_text)
+                        # 如果价格没有变化，市场ID用黑色，价格用蓝色
+                        label.config(text=text, fg='#0066CC')
                         
                 logging.debug(f"更新标签 [{row}][{col}]: {text}")
         except Exception as e:
@@ -281,7 +289,7 @@ class MarketMonitor:
         try:
             if row < len(self.price_labels) and col < len(self.price_labels[row]):
                 label = self.price_labels[row][col]
-                label.config(fg='#0066CC')  # 恢复为原来的蓝色
+                label.config(text=text, fg='#0066CC')  # 恢复为原来的蓝色
                 timer_key = f"{row}_{col}"
                 if timer_key in self.color_timers:
                     del self.color_timers[timer_key]
