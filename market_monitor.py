@@ -31,7 +31,7 @@ class MarketMonitor:
         self.root.title("Polymarket 监控器")
         # 创建两种不同大小的字体
         self.market_font = font.Font(size=18)  # 市场名称字体
-        self.price_font = font.Font(size=22)   # 价格字体大4号
+        self.price_font = font.Font(size=28)   # 价格字体大10号
         
         # 定义颜色为类属性
         self.BG_COLOR = '#E3EDCD'  # 淡绿色护眼色
@@ -106,7 +106,7 @@ class MarketMonitor:
         self.ethereum_btn.pack(side='left', padx=5)
         
         # 第二行：标签
-        ttk.Label(self.root, text="实时价格监控").pack(pady=10)
+        # ttk.Label(self.root, text="实时价格监控").pack(pady=10)
         
         # 第三行：价格显示网格
         self.grid_frame = tk.Frame(self.root, bg=self.BG_COLOR)
@@ -266,8 +266,14 @@ class MarketMonitor:
                     yes_price = lines[2]
                     no_price = lines[3]
                     
+                    # 移除特定前缀.这是为了去掉市场名称中的前缀。
+                    market_id = market_id.replace('bitcoin-', '')
+                    market_id = market_id.replace('solana-', '')
+                    market_id = market_id.replace('ethereum-', '')
+                    market_id = market_id.replace('will-', '')  # 保持原有的 will- 替换
+                    
                     # 使用不同字体大小创建显示文本
-                    display_text = f"{market_id}\n\n{yes_price}\n{no_price}"
+                    display_text = f"{market_id}\n\n{yes_price}   {no_price}"
                     
                     # 配置标签
                     label.config(text=display_text)
@@ -278,9 +284,9 @@ class MarketMonitor:
                         timer_key = f"{row}_{col}"
                         if timer_key in self.color_timers:
                             self.root.after_cancel(self.color_timers[timer_key])
-                        
+                        # 15秒后恢复颜色
                         self.color_timers[timer_key] = self.root.after(
-                            10000,
+                            15000,
                             lambda: self.restore_color(row, col, display_text)
                         )
                     else:
