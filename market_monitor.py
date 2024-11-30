@@ -30,7 +30,7 @@ class MarketMonitor:
         self.root = tk.Tk()
         self.root.title("Polymarket 监控器")
         # 创建两种不同大小的字体
-        self.market_font = font.Font(size=18)  # 市场名称字体
+        self.market_font = font.Font(size=24)  # 市场名称字体
         self.price_font = font.Font(size=28)   # 价格字体大10号
         
         # 定义颜色为类属性
@@ -289,48 +289,63 @@ class MarketMonitor:
                     yes_price = lines[2]
                     no_price = lines[3]
                     
-                    # 移除特定前缀.这是为了去掉市场名称中的前缀。
+                    # 移除特定前缀
                     market_id = market_id.replace('bitcoin-', '')
                     market_id = market_id.replace('solana-', '')
                     market_id = market_id.replace('ethereum-', '')
-                    market_id = market_id.replace('will-', '')  # 保持原有的 will- 替换
+                    market_id = market_id.replace('will-', '')
                     
-                    # 使用不同字体大小创建显示文本，这里显示 YES 和 NO 的实时价格
-                    display_text = f"{market_id}\n\n{yes_price}   {no_price}"
+                    # 创建两个标签：一个用于市场名称，一个用于价格
+                    market_label = tk.Label(
+                        label.master,
+                        text=market_id,
+                        font=self.market_font,
+                        fg='#2E7D32',  # 深绿色，护眼舒适
+                        bg=self.FRAME_BG,
+                        anchor='center',
+                        justify='center'
+                    )
+                    market_label.pack(side='top', pady=(5, 0))
                     
-                    # 配置标签
-                    label.config(text=display_text)
+                    # 价格标签
+                    price_label = tk.Label(
+                        label.master,
+                        text=f"{yes_price}   {no_price}",
+                        font=self.price_font,
+                        fg='#0066CC' if not price_changed else 'red',
+                        bg=self.FRAME_BG,
+                        anchor='center',
+                        justify='center'
+                    )
+                    price_label.pack(side='top', pady=(10, 5))
                     
-                    # 设置字体和颜色
+                    # 删除原标签
+                    label.destroy()
+                    
+                    # 保存新标签的引用
+                    self.price_labels[row][col] = (market_label, price_label)
+                    
+                    # 设置颜色变化计时器
                     if price_changed:
-                        label.config(fg='red')
                         timer_key = f"{row}_{col}"
                         if timer_key in self.color_timers:
                             self.root.after_cancel(self.color_timers[timer_key])
-                        # 15秒后恢复颜色
+                        
                         self.color_timers[timer_key] = self.root.after(
                             15000,
-                            lambda: self.restore_color(row, col, display_text)
+                            lambda: self.restore_color(row, col, market_id, f"{yes_price}   {no_price}")
                         )
-                    else:
-                        label.config(fg='#0066CC')
-                    
-                    # 分别设置市场名称和价格的字体大小
-                    label.config(font=self.market_font)  # 默认字体
-                    
-                    # 使用标签的 tag 功能设置不同部分的字体
-                    label.config(font=self.price_font)  # 价格使用大字体
                     
                 logging.debug(f"更新标签 [{row}][{col}]: {text}")
         except Exception as e:
             logging.error(f"更新标签出错: {str(e)}\n{traceback.format_exc()}")
 
-    def restore_color(self, row, col, text):
+    def restore_color(self, row, col, market_id, price_text):
         """恢复标签的默认颜色"""
         try:
             if row < len(self.price_labels) and col < len(self.price_labels[row]):
-                label = self.price_labels[row][col]
-                label.config(text=text, fg='#0066CC')  # 恢复为原来的蓝色
+                market_label, price_label = self.price_labels[row][col]
+                price_label.config(fg='#0066CC')  # 恢复价格为蓝色
                 timer_key = f"{row}_{col}"
                 if timer_key in self.color_timers:
                     del self.color_timers[timer_key]
