@@ -21,7 +21,8 @@ if not os.path.exists(log_dir):
 # 配置日志
 logging.basicConfig(
     filename=os.path.join(log_dir, f'monitor_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log'),
-    level=logging.DEBUG,  # 改为 DEBUG 级别以获取更多信息
+    level=logging.ERROR,  # 只记录 ERROR 级别以上的日志
+    # level=logging.DEBUG,  # 改为 DEBUG 级别以获取更多信息
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
