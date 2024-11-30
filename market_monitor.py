@@ -108,12 +108,16 @@ class MarketMonitor:
         
         # 第二行：标签
         label_frame = tk.Frame(self.root, bg=self.BG_COLOR)
-        label_frame.pack(pady=10)
+        label_frame.pack(pady=10, fill='x', padx=15)
+        
+        # 创建左对齐的容器
+        left_container = tk.Frame(label_frame, bg=self.BG_COLOR)
+        left_container.pack(side='left')
         
         # 实时价格标签
         price_label = tk.Label(
-            label_frame, 
-            text="", # 初始为空
+            left_container, 
+            text="", # 初始为空，不要修改
             bg=self.BG_COLOR,
             font=('Arial', 12)
         )
@@ -121,7 +125,7 @@ class MarketMonitor:
         
         # 加密货币名称标签
         self.crypto_label = tk.Label(
-            label_frame,
+            left_container,
             text="Bitcoin",  # 设置初始值
             bg=self.BG_COLOR,
             font=('Arial', 28, 'bold'),  # 加粗显示
@@ -205,46 +209,55 @@ class MarketMonitor:
             return False
 
     def monitor_prices(self):
+        last_links_check_time = 0  # 记录上次检查链接的时间
+        last_links_count = 0       # 记录上次的链接数量
+        
         while self.monitoring:
             try:
-                logging.info("开始获取市场数据...")
-                self.driver.get(self.url_entry.get())
+                current_time = time.time()
                 
-                time.sleep(2)
+                # 每10分钟检查一次链接
+                if current_time - last_links_check_time >= 600:  # 600秒 = 10分钟
+                    logging.info("开始获取市场数据...")
+                    self.driver.get(self.url_entry.get())
+                    time.sleep(2)
+                    
+                    logging.info("等待市场容器加载...")
+                    market_container = WebDriverWait(self.driver, 10).until(
+                        EC.presence_of_element_located((By.ID, "markets-grid-container"))
+                    )
+                    
+                    # 获取并过滤链接
+                    market_links = market_container.find_elements(By.TAG_NAME, "a")
+                    valid_links = []
+                    for link in market_links:
+                        href = link.get_attribute('href')
+                        if href and '#comments' not in href:
+                            valid_links.append(href)
+                    
+                    num_links = len(valid_links)
+                    logging.info(f"找到 {num_links} 个有效链接")
+                    
+                    # 检查链接数量是否变化
+                    if num_links != last_links_count:
+                        logging.info(f"链接数量从 {last_links_count} 变为 {num_links}")
+                        # 更新网格
+                        self.root.after(0, self.create_grid, num_links)
+                        time.sleep(0.5)
+                        last_links_count = num_links
+                    
+                    # 更新链接映射
+                    self.market_urls = {}
+                    for idx, href in enumerate(valid_links):
+                        self.market_urls[idx] = href
+                    
+                    # 更新检查时间
+                    last_links_check_time = current_time
                 
-                logging.info("等待市场容器加载...")
-                market_container = WebDriverWait(self.driver, 10).until(
-                    EC.presence_of_element_located((By.ID, "markets-grid-container"))
-                )
-                
-                # 获取并过链接
-                market_links = market_container.find_elements(By.TAG_NAME, "a")
-                valid_links = []
-                for link in market_links:
-                    href = link.get_attribute('href')
-                    if href and '#comments' not in href:
-                        valid_links.append(href)
-                
-                num_links = len(valid_links)
-                logging.info(f"找到 {num_links} 个有效链接")
-                
-                # 只在第一次或链接数量变化时创建网格
-                current_rows = len(self.price_labels)
-                needed_rows = (num_links + 3) // 4
-                if current_rows != needed_rows:
-                    logging.info(f"需要调整网格大小: 从 {current_rows} 行到 {needed_rows} 行")
-                    self.root.after(0, self.create_grid, num_links)
-                    time.sleep(0.5)  # 等待网格创建完成
-                
-                # 存储链接和索引的映射
-                self.market_urls = {}  # 添加这行来存储原始链接
-                
-                for idx, href in enumerate(valid_links):
+                # 获取价格（每5秒一次）
+                for idx, href in enumerate(self.market_urls.values()):
                     try:
-                        self.market_urls[idx] = href  # 保存原始链接
-                        logging.debug(f"处理链接 {idx + 1}: {href}")
                         self.driver.get(href)
-                        
                         prices = WebDriverWait(self.driver, 10).until(
                             EC.presence_of_all_elements_located(
                                 (By.CSS_SELECTOR, ".c-bjtUDd.c-bjtUDd-ijxkYfH-css")
@@ -258,7 +271,6 @@ class MarketMonitor:
                             yes_price = prices[0].text
                             no_price = prices[1].text
                             
-                            # 检查价格是否变化
                             price_changed = False
                             if market_id in self.last_prices:
                                 last_yes, last_no = self.last_prices[market_id]
@@ -266,7 +278,7 @@ class MarketMonitor:
                                     price_changed = True
                             
                             self.last_prices[market_id] = (yes_price, no_price)
-                            display_text = f"{market_id}\n\n{yes_price}\n{no_price}"  # 保持间距一致
+                            display_text = f"{market_id}\n\n{yes_price}\n{no_price}"
                             self.root.after(0, self.update_price_label, idx, display_text, price_changed)
                     
                     except Exception as e:
