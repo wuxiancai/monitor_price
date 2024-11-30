@@ -112,7 +112,7 @@ class MarketMonitor:
         # 实时价格标签
         price_label = tk.Label(
             label_frame, 
-            text="实时价格监控：", 
+            text="", # 初始为空
             bg=self.BG_COLOR,
             font=('Arial', 12)
         )
@@ -295,7 +295,7 @@ class MarketMonitor:
                     market_id = market_id.replace('ethereum-', '')
                     market_id = market_id.replace('will-', '')  # 保持原有的 will- 替换
                     
-                    # 使用不同字体大小创建显示文本
+                    # 使用不同字体大小创建显示文本，这里显示 YES 和 NO 的实时价格
                     display_text = f"{market_id}\n\n{yes_price}   {no_price}"
                     
                     # 配置标签
