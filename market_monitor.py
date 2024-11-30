@@ -21,7 +21,8 @@ if not os.path.exists(log_dir):
 # 配置日志
 logging.basicConfig(
     filename=os.path.join(log_dir, f'monitor_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log'),
-    level=logging.DEBUG,  # 改为 DEBUG 级别以获取更多信息
+    level=logging.ERROR,  # 只记录 ERROR 级别以上的日志
+    # level=logging.DEBUG,  # 改为 DEBUG 级别以获取更多信息
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
@@ -216,7 +217,7 @@ class MarketMonitor:
                     EC.presence_of_element_located((By.ID, "markets-grid-container"))
                 )
                 
-                # 获取并过滤链接
+                # 获取并过链接
                 market_links = market_container.find_elements(By.TAG_NAME, "a")
                 valid_links = []
                 for link in market_links:
@@ -235,9 +236,12 @@ class MarketMonitor:
                     self.root.after(0, self.create_grid, num_links)
                     time.sleep(0.5)  # 等待网格创建完成
                 
-                # 处理每个有效链接
+                # 存储链接和索引的映射
+                self.market_urls = {}  # 添加这行来存储原始链接
+                
                 for idx, href in enumerate(valid_links):
                     try:
+                        self.market_urls[idx] = href  # 保存原始链接
                         logging.debug(f"处理链接 {idx + 1}: {href}")
                         self.driver.get(href)
                         
@@ -284,7 +288,7 @@ class MarketMonitor:
                 
                 # 分割文本
                 lines = text.split('\n')
-                if len(lines) == 4:  # 4行：市场名称、空行、YES价格、NO价格
+                if len(lines) == 4:
                     market_id = lines[0]
                     yes_price = lines[2]
                     no_price = lines[3]
@@ -295,17 +299,25 @@ class MarketMonitor:
                     market_id = market_id.replace('ethereum-', '')
                     market_id = market_id.replace('will-', '')
                     
+                    # 使用保存的原始链接
+                    market_url = self.market_urls.get(idx, '')
+                    
                     # 创建两个标签：一个用于市场名称，一个用于价格
                     market_label = tk.Label(
                         label.master,
                         text=market_id,
                         font=self.market_font,
-                        fg='#2E7D32',  # 深绿色，护眼舒适
+                        fg='#2E7D32',
                         bg=self.FRAME_BG,
                         anchor='center',
-                        justify='center'
+                        justify='center',
+                        cursor="hand2"
                     )
                     market_label.pack(side='top', pady=(5, 0))
+                    
+                    # 绑定点击事件，使用原始链接
+                    if market_url:
+                        market_label.bind('<Button-1>', lambda e, url=market_url: self.open_browser(url))
                     
                     # 价格标签
                     price_label = tk.Label(
@@ -335,8 +347,6 @@ class MarketMonitor:
                             15000,
                             lambda: self.restore_color(row, col, market_id, f"{yes_price}   {no_price}")
                         )
-                    
-                logging.debug(f"更新标签 [{row}][{col}]: {text}")
         except Exception as e:
             logging.error(f"更新标签出错: {str(e)}\n{traceback.format_exc()}")
 
@@ -401,6 +411,11 @@ class MarketMonitor:
             logging.debug(f"更新加密货币标签为: {crypto_name}")
         except Exception as e:
             logging.error(f"更新加密货币标签出错: {str(e)}")
+
+    def open_browser(self, url):
+        """在默认浏览器中打开URL"""
+        import webbrowser
+        webbrowser.open(url)
 
 if __name__ == "__main__":
     try:
