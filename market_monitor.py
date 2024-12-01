@@ -19,11 +19,25 @@ log_dir = 'LOGS'
 if not os.path.exists(log_dir):
     os.makedirs(log_dir)
 
+# 清理旧的日志文件
+def cleanup_old_logs(log_dir):
+    try:
+        log_files = [f for f in os.listdir(log_dir) if f.endswith('.log')]
+        if log_files:
+            log_files.sort()  # 按文件名排序
+            # 删除除最新文件外的所有文件
+            for old_file in log_files[:-1]:
+                os.remove(os.path.join(log_dir, old_file))
+    except Exception as e:
+        print(f"清理日志文件时出错: {str(e)}")
+
+# 清理旧日志
+cleanup_old_logs(log_dir)
+
 # 配置日志
 logging.basicConfig(
     filename=os.path.join(log_dir, f'monitor_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log'),
     level=logging.ERROR,  # 只记录 ERROR 级别以上的日志
-    # level=logging.DEBUG,  # 改为 DEBUG 级别以获取更多信息
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
