@@ -32,12 +32,12 @@ class MarketMonitor:
         self.root = tk.Tk()
         self.root.title("Polymarket 监控器")
         # 创建两种不同大小的字体
-        self.market_font = font.Font(family='Tahoma', size=24)  # 市场名称字体
-        self.price_font = font.Font(family='Arial', size=28)   # 价格字体大10号
+        self.market_font = font.Font(family=('楷体', 'KaiTi', 'STKaiti', 'AR PL KaitiM GB'), size=22)  # 市场名称字体
+        self.price_font = font.Font(family=('楷体', 'KaiTi', 'STKaiti', 'AR PL KaitiM GB'), size=28)   # 价格字体大10号
         
         # 定义颜色为类属性
-        self.BG_COLOR = '#E3EDCD'  # 淡绿色护眼色
-        self.FRAME_BG = '#F0F4EA'  # 稍浅一点的护眼色，用于方格背景
+        self.BG_COLOR = '#D3D3D3'  # 灰色护眼色#F0F4EA
+        self.FRAME_BG = '#C0C0C0'  # 稍浅一点的浅灰色，用于方格背景
         
         self.price_update_interval = 1000  # 每秒更新一次价格
         self.setup_ui()
@@ -205,13 +205,13 @@ class MarketMonitor:
             widget.destroy()
         
         # 计算需要的行数（向上取整）
-        num_rows = (num_links + 3) // 4  # 4是列数
+        num_rows = (num_links + 2) // 3  # 改为3列
         
         # 创建新的网格
         self.price_labels = []
         for i in range(num_rows):
             row_labels = []
-            for j in range(4):  # 4列
+            for j in range(3):  # 改为3列
                 cell_frame = tk.Frame(
                     self.grid_frame,
                     relief="solid",
@@ -347,8 +347,8 @@ class MarketMonitor:
 
     def update_price_label(self, idx, text, price_changed):
         try:
-            row = idx // 4
-            col = idx % 4
+            row = idx // 3  # 改为3列
+            col = idx % 3   # 改为3列
             if row < len(self.price_labels) and col < len(self.price_labels[row]):
                 label = self.price_labels[row][col]
                 
@@ -414,7 +414,7 @@ class MarketMonitor:
                             lambda: self.restore_color(row, col, market_id, f"{yes_price}   {no_price}")
                         )
         except Exception as e:
-            logging.error(f"更新标签��错: {str(e)}\n{traceback.format_exc()}")
+            logging.error(f"更新标签错: {str(e)}\n{traceback.format_exc()}")
 
     def restore_color(self, row, col, market_id, price_text):
         """恢复标签的默认颜色"""
