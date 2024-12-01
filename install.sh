@@ -31,6 +31,6 @@ source venv/bin/activate
 
 # 安装依赖
 echo "安装依赖..."
-pip3 install selenium==4.9.1
+pip3 install selenium==4.9.1 requests
 
 echo "安装完成！" 
